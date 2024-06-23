@@ -1,5 +1,7 @@
 # Screen Time Goal Tracker
 
+https://www.loom.com/share/9e10d9107c204419be00d6c90b217060?sid=1ff09c6d-971a-49b8-b492-95f8c4353a13
+
 ## Purpose
 
 This tracker helps iPhone and Mac users set and visualise screen time goals. It provides insights into daily screen time trends, unnecessary app usage, and pickup frequency, allowing users to set and track goals.
