@@ -2,11 +2,11 @@
 
 ## Purpose
 
-The Screen Time Goal Tracker is a Streamlit-based web application designed to help users monitor and manage their device usage, particularly focusing on iPhone screen time. It provides insights into daily screen time trends, unnecessary app usage, and pickup frequency, allowing users to set and track goals for healthier digital habits.
+This tracker helps iPhone and Mac users set and visualise screen time goals. It provides insights into daily screen time trends, unnecessary app usage, and pickup frequency, allowing users to set and track goals.
 
 Key features include:
 - Daily screen time and pickup trends visualization
-- Unnecessary screen time tracking
+- Unnecessary screen time tracking (where users specify which apps are the unnecessary ones they're targeting)
 - Goal achievement display
 - Detailed app usage breakdown
 - Suggestions for alternative activities when screen time goals are exceeded
