@@ -6,6 +6,23 @@ from datetime import datetime, timedelta
 import pytz
 from screentime import query_database
 
+# Default values
+DEFAULT_UNNECESSARY_APPS = ['ios', 'Netflix', 'Tweetie2']
+DEFAULT_SCREEN_TIME_GOAL = 1  # in hours
+DEFAULT_PICKUP_GOAL = 50
+
+# Alternative activities
+ALTERNATIVE_ACTIVITIES = [
+    "Write in your notebook",
+    "Take a walk",
+    "Message a friend",
+    "Go to the gym",
+    "Play with the baby",
+    "Read a book",
+    "Practice meditation",
+    "Learn a new skill online"
+]
+
 def convert_to_datetime(timestamp):
     return datetime.fromtimestamp(timestamp, pytz.UTC)
 
@@ -20,12 +37,12 @@ def get_color(value, thresholds):
     else:
         return "red"
 
-def get_color_intensity(hours):
-    if hours < 1:
+def get_color_intensity(hours, goal):
+    if hours < goal * 0.25:
         return "rgba(0, 255, 0, 0.1)"  # Very light green
-    elif hours < 2:
+    elif hours < goal * 0.5:
         return "rgba(0, 255, 0, 0.4)"  # Light green
-    elif hours < 3:
+    elif hours < goal * 0.75:
         return "rgba(0, 255, 0, 0.7)"  # Medium green
     else:
         return "rgba(0, 255, 0, 1)"    # Dark green
@@ -33,6 +50,32 @@ def get_color_intensity(hours):
 def main():
     local_tz = datetime.now().astimezone().tzinfo
     st.title(f"Screen Time Goal Tracker")
+
+    # Sidebar for user inputs
+    st.sidebar.header("Settings")
+
+    # Screen time goal input (using float)
+    screen_time_goal = st.sidebar.number_input("Daily Screen Time Goal (hours)", 
+                                            min_value=0.1, 
+                                            max_value=24.0, 
+                                            value=float(DEFAULT_SCREEN_TIME_GOAL), 
+                                            step=0.1)
+
+    # Pickup goal input (using int)
+    pickup_goal = st.sidebar.number_input("Daily Pickup Goal", 
+                                        min_value=1, 
+                                        max_value=1000, 
+                                        value=int(DEFAULT_PICKUP_GOAL), 
+                                        step=1)
+
+    # Unnecessary apps input (unchanged)
+    unnecessary_apps = st.sidebar.text_area("Unnecessary Apps (one per line)", 
+                                            value="\n".join(DEFAULT_UNNECESSARY_APPS))
+    unnecessary_apps = [app.strip() for app in unnecessary_apps.split("\n") if app.strip()]
+
+    # Calculate thresholds based on user inputs
+    screen_time_thresholds = [0.75 * screen_time_goal, screen_time_goal]
+    pickup_thresholds = [0.75 * pickup_goal, pickup_goal]
 
     try: 
         # Set the date range for the last 4 weeks
@@ -63,11 +106,10 @@ def main():
 
         # 1. Display goals
         st.header("Screen Time Goals")
-        st.write("1. Unnecessary screen time < 1h")
-        st.write("2. Pickups < 50")
+        st.write(f"1. Unnecessary screen time < {screen_time_goal}h")
+        st.write(f"2. Pickups < {pickup_goal}")
 
         # 2. Calculate unnecessary screen time and accesses
-        unnecessary_apps = ['ios', 'Netflix', 'Tweetie2']
         unnecessary_df = iphone_df[iphone_df['app'].str.contains('|'.join(unnecessary_apps), case=False, na=False)]
         today_unnecessary = unnecessary_df[unnecessary_df['start_time'].dt.date == end_date.date()]['usage_hours'].sum()
         today_accesses = unnecessary_df[unnecessary_df['start_time'].dt.date == end_date.date()].shape[0]
@@ -77,27 +119,17 @@ def main():
 
         with col1:
             st.subheader("Today's Unnecessary Screen Time")
-            color = get_color(today_unnecessary, [0.75, 1])
+            color = get_color(today_unnecessary, screen_time_thresholds)
             st.markdown(f"<h1 style='color: {color};'>{today_unnecessary:.2f} hours</h1>", unsafe_allow_html=True)
 
         with col2:
             st.subheader("Today's Number of Accesses")
-            color = get_color(today_accesses, [50, 100])
+            color = get_color(today_accesses, pickup_thresholds)
             st.markdown(f"<h1 style='color: {color};'>{today_accesses}</h1>", unsafe_allow_html=True)
 
-        if get_color(today_unnecessary, [0.75, 1]) == "red":
+        if get_color(today_unnecessary, screen_time_thresholds) == "red":
             st.subheader("Suggestions for alternative activities:")
-            activities = [
-                "Write in your notebook",
-                "Take a walk",
-                "Message a friend",
-                "Go to the gym",
-                "Play with the baby",
-                "Read a book",
-                "Practice meditation",
-                "Learn a new skill online"
-            ]
-            for activity in activities:
+            for activity in ALTERNATIVE_ACTIVITIES:
                 st.write(f"- {activity}")
 
         # 3. Daily screen time trend for the last 4 weeks
@@ -129,7 +161,7 @@ def main():
         fig_achievement = go.Figure()
         
         for i, row in daily_achievement.iterrows():
-            color = get_color_intensity(row['unnecessary_time'])
+            color = get_color_intensity(row['unnecessary_time'], screen_time_goal)
             fig_achievement.add_trace(go.Scatter(
                 x=[row['start_time'], row['start_time']],
                 y=[0, 1],
@@ -152,10 +184,10 @@ def main():
         # Add a legend explaining the color intensities
         st.write("Color intensity guide:")
         col1, col2, col3, col4 = st.columns(4)
-        col1.color_picker("< 1 hour", "#E6FFE6", disabled=True)
-        col2.color_picker("1-2 hours", "#66FF66", disabled=True)
-        col3.color_picker("2-3 hours", "#00FF00", disabled=True)
-        col4.color_picker("> 3 hours", "#00CC00", disabled=True)
+        col1.color_picker(f"< {screen_time_goal/4}h", "#E6FFE6", disabled=True)
+        col2.color_picker(f"{screen_time_goal/4}h - {screen_time_goal/2}h", "#66FF66", disabled=True)
+        col3.color_picker(f"{screen_time_goal/2}h - {3*screen_time_goal/4}h", "#00FF00", disabled=True)
+        col4.color_picker(f"> {3*screen_time_goal/4}h", "#00CC00", disabled=True)
 
         # 6. Table of app usage for the last 24 hours
         st.header("App Usage Details (Last 24 Hours)")
